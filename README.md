@@ -33,7 +33,22 @@ install.packages(c("tidyverse", "lubridate", "zoo", "gganimate", "ggrepel"))
 
 The EDA section explores global temperature trends, anomalies, and 
 temperature changes over different timeframes. 
-Also, I included an animation that illustrate cumulative temperature anomalies in developed countries over time. The animation is created using the `gganimate` package.
+Also, I included an animation that illustrate cumulative temperature anomalies in developed countries over time.  
+The animation is created using the `gganimate` package.
+
+Here are some key findings:   
+
+**The average temperature has been increasing since 1870s.**
+
+![](plots/Land_Average_Temperature.png)
+
+**Since 1900s, the winter season has experienced almost 2 degree increase in my homeland!**
+
+![](plots/Average_Temperature_Moldova.png)  
+
+**The temperature anomaly is getting higher, with 0.4 degrees higher in 2015 than 30 years before that.**
+
+![](plots/Anomaly.png)
 
 
 ## License
