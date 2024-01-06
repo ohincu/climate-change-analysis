@@ -19,7 +19,7 @@ my_theme <- function(text_color) {
 }
 
 # Reading data -----------------------------------------------------------------
-temp <- read_csv("global_temp.csv", col_names = TRUE, col_types = cols(
+temp <- read_csv("data/global_temp.csv", col_names = TRUE, col_types = cols(
   dt = col_date(),
   LandMaxTemperature = col_number(),
   LandMinTemperature = col_number(),
@@ -29,7 +29,7 @@ temp <- read_csv("global_temp.csv", col_names = TRUE, col_types = cols(
   LandAndOceanAverageTemperatureUncertainty = col_number()
 ))
 
-temp_country  <- read_csv("global_temp_country.csv", col_names = TRUE)
+temp_country  <- read_csv("data/global_temp_country.csv", col_names = TRUE)
 
 
 # EDA --------------------------------------------------------------------------
@@ -53,9 +53,9 @@ temp %>%
   geom_line() + 
   geom_smooth(color = "maroon") +
   labs(x = NULL, y = NULL) +
-  ggtitle("Land Average Temperature Uncertainty") +
+  ggtitle("Land Average Temperature") +
   my_theme(text_color = "black") +
-  scale_color_gradient(name = "ºC", low = "blue", high = "orange")
+  scale_color_gradient(name = "°C", low = "blue", high = "orange")
   
 
 # There is a spreaded uncertainty until 1850. Therefore, will rely mostly on data
@@ -68,7 +68,7 @@ temp %>%
   labs(x = 'Date', y = NULL) +
   ggtitle("Land Average Temperature Uncertainty") +
   my_theme(text_color = "black") +
-  scale_color_gradient(name = "ºC", low = "blue", high = "orange")
+  scale_color_gradient(name = "°C", low = "blue", high = "orange")
 
 # The upward shift from 2000 on in the entire boxplot suggests a 
 # systematic increase in the distribution of the data.
@@ -211,7 +211,7 @@ temp_country %>%
   geom_point() +
   facet_wrap(~ season, scales = "free") +
   geom_smooth(color = "maroon") +
-  scale_color_gradient(name = "ºC", low = "blue", high = "orange") +
+  scale_color_gradient(name = "°C", low = "blue", high = "orange") +
   labs(x = NULL, y = NULL) +
   ggtitle("Average Temperature by Year and by Season in Moldova") +
   my_theme(text_color = "black")
