@@ -1,0 +1,300 @@
+---
+title: "Temperature Change Analysis"
+format: html
+editor: visual
+---
+
+## Load packages
+
+```{r}
+# Manipulations 
+library(lubridate)
+
+# Plotting
+library(tidyverse)
+library(ggrepel)
+
+# Animations and gif creation
+library(gganimate)
+library(gifski)
+
+```
+
+## Set personalized theme and hide warnings
+
+```{r}
+# Set theme
+my_theme <- function(text_color) {
+  theme_bw() +
+    theme(text = element_text(size = 10, family = "Manjari", face = "bold", color = text_color),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank(),
+          plot.title = element_text(hjust = 0.5)
+    )
+}
+
+# Hide warnings
+options(warn = -1, repr.plot.width = 10, repr.plot.height = 6, repr.plot.res = 150 )
+
+```
+
+## Read data
+
+1.  Global temperatures
+2.  Country temperatures
+
+```{r}
+temp <- read_csv("data/global_temp.csv", col_names = TRUE, col_types = cols(
+  dt = col_date(),
+  LandMaxTemperature = col_number(),
+  LandMinTemperature = col_number(),
+  LandMaxTemperatureUncertainty = col_number(),
+  LandMinTemperatureUncertainty = col_number(),
+  LandAndOceanAverageTemperature = col_number(),
+  LandAndOceanAverageTemperatureUncertainty = col_number()
+))
+
+temp_country <- read_csv("data/global_temp_country.csv", col_names = TRUE)
+```
+
+## EDA
+
+```{r}
+# Adding features 
+temp$year <- as.numeric(format(temp$dt, "%Y"))
+temp_country$year <- as.numeric(format(temp_country$dt, "%Y"))
+breaks <- seq(1750, 2100, by = 50)
+temp$half_century <- cut(temp$year, breaks, labels = paste(breaks[-length(breaks)], breaks[-1], sep = "-"), include.lowest = TRUE)
+```
+
+First, let's look at **global temperatures**.
+
+```{r}
+temp %>% 
+  ggplot(aes(dt, LandAverageTemperature, color = LandAverageTemperature)) +
+  geom_line() + 
+  geom_smooth(color = "maroon") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Land Average Temperature") +
+  my_theme(text_color = "black") +
+  scale_color_gradient(name = "°C", low = "blue", high = "orange")
+```
+
+-   Over the past three decades, we observe that minimum temperatures consistently surpass the 2.5°C threshold, indicating a warming trend.
+
+-   Additionally, temperatures exhibited more variability prior to 1800, though there's a degree of skepticism regarding the accuracy of those ancient records when compared to the recent data.
+
+```{r}
+temp %>% 
+  ggplot(aes(dt, LandAverageTemperatureUncertainty, color = LandAverageTemperatureUncertainty)) +
+  geom_line() +
+  labs(x = 'Date', y = NULL) +
+  ggtitle("Land Average Temperature Uncertainty") +
+  my_theme(text_color = "black") +
+  scale_color_gradient(name = "?C", low = "blue", high = "orange")
+```
+
+There is a spreaded uncertainty until 1850. Therefore, will rely mostly on data from that point on.
+
+Let's look now at the temperature changes for each 50 years.
+
+```{r}
+temp %>% 
+  ggplot(aes(half_century, LandMinTemperature)) +
+  geom_boxplot(fill = "steelblue1") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Land Minimum Temperature by each Half-Century") +
+  my_theme(text_color = "black")
+```
+
+```{r}
+temp %>% 
+  ggplot(aes(half_century, LandMaxTemperature)) +
+  geom_boxplot(fill = "lightyellow") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Land Maximum Temperature by each Half-Century") +
+  my_theme(text_color = "black")
+```
+
+The upward shift from 2000 on in the entire boxplot suggests a systematic increase in the distribution of the data.
+
+```{r}
+temp %>% 
+  filter(year > 1850) %>% 
+  ggplot(aes(dt, LandAndOceanAverageTemperature, color = LandAndOceanAverageTemperature)) +
+  geom_line() +
+  geom_smooth(color = "maroon") +
+  facet_wrap(~ half_century, ncol = 5, scales = "free_x") +
+  labs(x = 'Year', y = '') +
+  ggtitle("Land and Ocean Average Temperature by each Half-Century") +
+  my_theme(text_color = "black") +
+  scale_color_gradient(low = "blue", high = "orange") +
+  guides(color = FALSE)
+```
+
+-   There is an upward move throughout each half-century.
+
+-   Still, there were times when the average temperatures would drop as in the late 40s - early 50s. But since then we do not see a drop at all.
+
+-   There was a stagnation between 2005- 2010 and then the trend is still upwards.
+
+```{r}
+temp %>% 
+  ggplot(aes(LandAverageTemperature)) +
+  geom_histogram(bins = 50, fill = 'tan2') +
+  facet_wrap(~ half_century, nrow = 6, scales = "free_y") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Land and Ocean Average Temperature by each Half-Century") +  
+  my_theme(text_color = "black")
+```
+
+We can observe 2 things:
+
+1.  The distribution has less variance across centuries. Accordingly, we are experiencing certain temperatures more often, seemingly higher temperatures and less often minimum temperatures. If you look closely, it seems like there are more separate houses instead of a connecting city.
+2.  The changes seem insignificant to the human eye, for example from 2000 on we did not have anymore temperatures less than 2.5 degrees. Of course, that could be due the way the temperatures were recorded, but since 1900, we did not have even 0 average degrees.
+
+```{r}
+
+temp %>% 
+  ggplot(aes(LandMinTemperature)) +
+  geom_histogram(bins = 50, fill = 'steelblue1') +
+  facet_wrap(~ half_century, nrow = 6, scales = "free_y")
+
+temp %>% 
+  ggplot(aes(LandMaxTemperature)) +
+  geom_histogram(bins = 50, fill = 'tan2') +
+  facet_wrap(~ half_century, nrow = 6, scales = "free_y")
+```
+
+Looking at min and max temperatures, we can see the distribution is moving to the right.
+
+Let's zoom in now by **country**.
+
+```{r}
+# Distinguishing between major economies categorized as developed and 
+# those categorized as developing.
+# Please note that this classification is subjective and has been arbitrarily 
+# defined by the author.
+
+temp_country <- temp_country %>%
+  mutate(country_type = case_when(
+    Country %in% c("United States", 'United Kingdom (Europe)', "Germany", 
+                   'France (Europe)', 'Belgium', 'Netherlands', 
+                   'Australia', 'Japan', 'Canada') ~ "Developed",
+    Country %in% c("China", "Brazil", "Russia", "India", "South Africa", "Mexico") ~ "Developing",
+    TRUE ~ "Other"),
+         month = month(dt)
+  )
+```
+
+```{r}
+temp_country %>%
+  filter(country_type == 'Developed') %>% 
+  group_by(Country, year) %>% 
+  summarise(avg_temp_year = mean(AverageTemperature)) %>% 
+  ggplot(aes(year, avg_temp_year, color = Country)) +
+  geom_line() +
+  geom_smooth(color = "maroon") +
+  facet_wrap(~ Country, scales = "free") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Average Temperature by Year in Developed Countries") +
+  my_theme(text_color = "black") +
+  guides(color = FALSE)
+```
+
+-   The average temperatures were pretty stable until around 1880s. From that on, probably due to the Industrial Revolution, the temperatures started increasing. The increase is almost not noticeable compared to the increases from 1960s on.
+
+-   From 1960 on, the temperatures have increased by almost 1 degree Celcioius. The most striking example is the US.
+
+```{r}
+temp_country %>%
+  filter(country_type == 'Developing') %>% 
+  group_by(Country, year) %>% 
+  summarise(avg_temp_year = mean(AverageTemperature)) %>% 
+  ggplot(aes(year, avg_temp_year, color = Country)) +
+  geom_line() +
+  geom_smooth(color = "maroon") +
+  facet_wrap(~ Country, scales = "free") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Average Temperature by Year in Developing Countries") +
+  my_theme(text_color = "black") +
+  guides(color = FALSE)
+```
+
+Similar case here.
+
+Now, I'm doing this for myself. I want to see **how things have changed in my homeland, in Moldova**.
+
+```{r}
+temp_country %>% 
+  filter(Country == 'Moldova') %>% 
+  mutate(season = case_when(month %in% c(12, 1, 2) ~ 'Winter',
+                            month %in% c(3, 4, 5) ~ 'Spring',
+                            month %in% c(6, 7, 8) ~ 'Summer',
+                            month %in% c(9, 10, 11) ~ 'Autumn')) %>% 
+  group_by(year, season, Country) %>% 
+  summarise(avg_temp_year_season = mean(AverageTemperature)) %>% 
+  ggplot(aes(year, avg_temp_year_season, color = avg_temp_year_season)) +
+  geom_point() +
+  facet_wrap(~ season, scales = "free") +
+  geom_smooth(color = "maroon") +
+  scale_color_gradient(name = "?C", low = "blue", high = "orange") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Average Temperature by Year and by Season in Moldova") +
+  my_theme(text_color = "black")
+```
+
+Across seasons, the winter season has experienced more than 1 degree increase and spring & summer almost 2 degrees since the 1900s!
+
+Time to move on to **anomalies.** It is a frequently used metric in climatology. Although not originally present in the dataset, I'll be creating my own.
+
+I know, this here is not pure science, but this project is more of a playground. Since the 30-year reference period is widely used when analyzing climate data, I'd be applying it here as well.
+
+```{r}
+temp <- temp %>% 
+  mutate(y30 = ceiling(year / 30) * 30)
+
+temp %>%
+  group_by(y30) %>%
+  summarise(avg_temp = mean(LandAverageTemperature, na.rm = TRUE)) %>% 
+  mutate(anomaly = avg_temp - lag(avg_temp)) %>% 
+  ggplot(aes(x = y30, y = anomaly, fill = factor(sign(anomaly)))) +
+  geom_bar(stat = "identity", position = "identity") +
+  scale_fill_manual(values = c("steelblue1", "orange"), guide = FALSE) +
+  labs(x = "", y = "Anomaly") +
+  ggtitle("Temperature Difference from 30 Years Prior") +
+  my_theme(text_color = "black")
+```
+
+No more blues are heard.
+
+And as an animation it would like this ...
+
+```{r}
+# See how it keeps going up?
+p <- temp_country %>% 
+  mutate(y30 = ceiling(year / 30) * 30) %>% 
+  group_by(y30, Country, country_type) %>% 
+  summarise(avg_temp = mean(AverageTemperature, na.rm = TRUE)) %>% 
+  group_by(Country, country_type) %>% 
+  mutate(anomaly = avg_temp - dplyr::lag(avg_temp, order_by = y30),
+  anomaly_cum = cumsum(replace(anomaly, is.na(anomaly), 0))) %>% 
+  filter(country_type == 'Developed') %>% 
+  ggplot(aes(y30, anomaly_cum, color = Country)) +
+  geom_point(size = 4) +
+  my_theme(text_color = "black") +
+  labs(x = NULL, y = NULL) +
+  ggtitle("Cumulative Anomaly in Developed Countries") +
+  # gganimate:
+  labs(title = 'Year: {frame_time}', x = '', y = 'Cumulative Anomaly') +
+  transition_time(y30) +
+  ease_aes('cubic-in-out')
+
+p
+```
+
+```{r}
+# Save the animation as a gif: 
+my_gif <- animate(p, width = 1600, height = 800, renderer = gifski_renderer(loop=FALSE))  
+anim_save(filename="animation.gif", my_gif)
+```
